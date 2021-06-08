@@ -26,7 +26,10 @@ def deduplicate_pdf(input_file_path, output_file_path=""):
                 if number != last_seen:
                     pdf_writer.addPage(last_page)
                     last_seen = number
-                last_page = page
+            else:
+                pdf_writer.addPage(last_page)
+                last_seen = -1
+            last_page = page
 
         pdf_writer.addPage(last_page)  # add last page
 
