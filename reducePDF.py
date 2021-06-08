@@ -1,35 +1,14 @@
 import sys
 
-import numpy as np
 from PyPDF2 import PdfFileReader, PdfFileWriter
-from pdf2image import convert_from_path
-from tqdm import tqdm
-
-
-def substract_PIL_images(image1, image2):
-    array1 = np.asarray(image1, dtype='int32')
-    array2 = np.asarray(image2, dtype='int32')
-
-    return array1 - array2
-
-
-def compare_images(image1, image2):
-    diff = substract_PIL_images(image1, image2)
-
-    neg_vals = np.count_nonzero(diff < 0)
-    pos_vals = np.count_nonzero(diff > 0)
-
-    return pos_vals, neg_vals
-
-
-def discard_slide(image1, image2):
-    pos_vals, neg_vals = compare_images(image1, image2)
-    return neg_vals == 0 or pos_vals == 0
+import re
 
 
 def deduplicate_pdf(input_file_path, output_file_path=""):
     if output_file_path == "":
         base, _, file = input_file_path.rpartition('/')
+        if base == '':  # take empty base path into account
+            base = '.'
         name, _, extensions = file.partition('.')
         output_file_path = f'{base}/{name}_reduced.{extensions}'
 
@@ -37,18 +16,26 @@ def deduplicate_pdf(input_file_path, output_file_path=""):
         pdf_reader = PdfFileReader(f)  # original slides
         pdf_writer = PdfFileWriter()
 
-        num_slides = pdf_reader.getNumPages()
+        last_seen = 0
+        last_page = pdf_reader.getPage(0)
+        for i in range(1, pdf_reader.numPages):
+            page = pdf_reader.getPage(i)
+            search_slide = re.search(r'(?<=slide)(\d\n)+', page.extractText())
+            if search_slide is not None:
+                number = int(search_slide.group(0).replace('\n', ''))
+                if number != last_seen:
+                    pdf_writer.addPage(last_page)
+                    last_seen = number
+                last_page = page
 
-        images = convert_from_path(input_file_path, dpi=50, grayscale=True)  # slides as images
-        for i in tqdm(range(len(images) - 1)):
-            if not discard_slide(images[i], images[i + 1]):
-                pdf_writer.addPage(pdf_reader.getPage(i))
-        pdf_writer.addPage(pdf_reader.getPage(num_slides - 1))  # add last page
+        pdf_writer.addPage(last_page)  # add last page
+
+        print("done extracting")
 
         with open(output_file_path, 'wb') as out:
             pdf_writer.write(out)
 
-        print(f"Slide deck of {num_slides} slides reduced to {pdf_writer.getNumPages()} slides")
+        print(f"Slide deck of {pdf_reader.numPages} slides reduced to {pdf_writer.getNumPages()} slides")
 
 
 if __name__ == '__main__':
