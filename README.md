@@ -5,25 +5,13 @@ reducePDF.py deletes redundant slides from a slide deck. Often, in decks exporte
 
 ## Limitations
 
-This code was written for 'cumulative' animations. It only works when the changes between frames are additions.
-
-The code doesn't work when
-- information is removed between two frames of the same slide (the last slide with less information will be kept)
-- different parts of text are added on backgrounds of different colors at the same time (in this case too many slides will be kept)
+This code was written for extracting the last slide with a certain number. It only works when the slide contains the string "slide <number>".
 
 ## Usage
 ### Dependencies
 
 To use the code, you need the following libraries
-- numpy
 - PyPDF2
-- pdf2image
-- tqdm
-
-#### Running on Mac OS
-
-To run on Mac the pdf2image dependency also requires you to install poppler for Mac. [You can do so by using brew](http://macappstore.org/poppler/):
-    brew install poppler
 
 ### Run
 
