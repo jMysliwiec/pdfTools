@@ -1,7 +1,6 @@
 import sys
 
 from PyPDF2 import PdfFileReader, PdfFileWriter
-import re
 
 
 def deduplicate_pdf(input_file_path, output_file_path=""):
@@ -16,17 +15,20 @@ def deduplicate_pdf(input_file_path, output_file_path=""):
         pdf_reader = PdfFileReader(f)  # original slides
         pdf_writer = PdfFileWriter()
 
-        last_seen = 0
+        # last_seen = 0
         last_page = pdf_reader.getPage(0)
+        text_on_last_page = set(last_page.extractText().split())
+
         for i in range(1, pdf_reader.numPages):
             page = pdf_reader.getPage(i)
-            search_slide = re.search(r'(?<=slide)(\d\n)+', page.extractText())
-            if search_slide is not None:
-                number = int(search_slide.group(0).replace('\n', ''))
-                if number != last_seen:
+            text_on_page = set(page.extractText().split())
+            for part in text_on_last_page:
+                if part not in text_on_page:  # is this is a new page
                     pdf_writer.addPage(last_page)
-                    last_seen = number
-                last_page = page
+                    break
+
+            text_on_last_page = text_on_page
+            last_page = page
 
         pdf_writer.addPage(last_page)  # add last page
 
